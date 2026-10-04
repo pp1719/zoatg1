@@ -1,0 +1,15 @@
+{
+  "name": "ai-btcusd-signal-pro",
+  "version": "3.2.0",
+  "description": "BTC/USDT real-time technical analysis, signal engine and risk management dashboard (vanilla JS)",
+  "main": "script.js",
+  "scripts": {
+    "test": "node tests/data-quality.test.js && node tests/indicators-and-strategy.test.js && node tests/performance-and-backtest.test.js && node tests/master-signal-gates.test.js"
+  },
+  "keywords": ["bitcoin", "trading", "technical-analysis", "binance", "signal"],
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}

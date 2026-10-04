@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BTC/USD AI Intelligence & Signal Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <!-- TradingView Widget Script -->
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <!-- Top Navigation Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">₿</div>
+      <div>
+        <div class="brand-title">
+          <h1>BTC/USD <span>AI INTELLIGENCE</span></h1>
+          <span class="version-tag">PRO v3.0</span>
+        </div>
+        <p>Multi-Timeframe AI Engine • 10 Indicators • Real-Time Divergence Detection • Kelly Position Sizing</p>
+      </div>
+    </div>
+    
+    <div class="topbar-actions">
+      <div class="feed-status" id="feedStatus">
+        <span class="status-indicator live"></span>
+        <span class="feed-text" id="feedText">BINANCE LIVE FEED</span>
+        <small id="lastUpdated">กำลังเชื่อมต่อ...</small>
+      </div>
+      <button class="btn-action" id="refreshButton" title="รีเฟรชข้อมูลล่าสุด">
+        <span class="refresh-icon">↻</span> อัปเดตสด
+      </button>
+    </div>
+  </header>
+
+  <!-- Data Integrity / Fallback Warning Banner (ซ่อนเมื่อข้อมูลสดปกติ) -->
+  <div class="data-banner" id="dataBanner" role="alert" hidden>
+    <span class="data-banner-icon">⚠️</span>
+    <div class="data-banner-text">
+      <strong id="dataBannerTitle">Data Source Warning</strong>
+      <span id="dataBannerDetail">—</span>
+    </div>
+  </div>
+
+  <!-- Action Advice Banner (คำแนะนำการเข้าเทรดตามระดับความมั่นใจ %) -->
+  <section class="action-banner-wrap">
+    <div class="action-banner" id="actionBanner">
+      <div class="action-icon" id="actionIcon">⚡</div>
+      <div class="action-info">
+        <div class="action-title-row">
+          <span class="action-badge" id="actionBadge">STRONG BUY</span>
+          <span class="action-conviction" id="actionConviction">ความมั่นใจสูง 88% — เข้าได้ทันที</span>
+        </div>
+        <div class="validation-meta">
+          <span class="trade-readiness" id="tradeReadiness">READY • ENTRY ALLOWED</span>
+          <span class="validation-summary" id="validationSummary">Reason: baseline checks passed</span>
+        </div>
+        <p class="action-guidance" id="actionGuidance">
+          สัญญาณทางเทคนิคทุกมิติสอดคล้องกัน (EMA Ribbon, MACD, StochRSI และ Volume) แนะนำเปิด Position ตามจุด Entry และวาง Stop Loss เคร่งครัด
+        </p>
+      </div>
+      <div class="action-quick-stats">
+        <div class="quick-stat">
+          <small>ENTRY แนะนำ</small>
+          <strong id="bannerEntry">—</strong>
+        </div>
+        <div class="quick-stat">
+          <small>STOP LOSS</small>
+          <strong class="color-red" id="bannerStop">—</strong>
+        </div>
+        <div class="quick-stat">
+          <small>TARGET 1 (TP1)</small>
+          <strong class="color-green" id="bannerTarget">—</strong>
+        </div>
+        <div class="quick-stat">
+          <small>TARGET 2 (TP2)</small>
+          <strong class="color-green" id="bannerTp2">—</strong>
+        </div>
+        <div class="quick-stat">
+          <small>RUNNER (TP3)</small>
+          <strong class="color-green" id="bannerTp3">—</strong>
+        </div>
+        <div class="quick-stat">
+          <small>EDGE ($EV)</small>
+          <strong class="color-blue" id="bannerEv">—</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hero Row: Live Price, Main Signal, Confidence Gauge -->
+  <section class="hero-grid">
+    <!-- Live Price Card -->
+    <article class="panel price-card">
+      <div class="card-label">
+        <span class="coin-icon">₿</span>
+        <span>BITCOIN SPOT</span>
+        <span class="market-tag">BTC / USDT</span>
+        <span class="live-dot" title="ราคาเรียลไทม์"></span>
+      </div>
+      <div class="price-line">
+        <strong id="price">—</strong>
+        <span class="currency">USDT</span>
+      </div>
+      <div id="priceChange" class="change positive">
+        <span>▲</span> +0.00 (0.00%) <em>24H</em>
+      </div>
+      <div class="price-stats">
+        <div>
+          <span>24H HIGH</span>
+          <strong id="high24">—</strong>
+        </div>
+        <div>
+          <span>24H LOW</span>
+          <strong id="low24">—</strong>
+        </div>
+        <div>
+          <span>24H VOLUME</span>
+          <strong id="volume24">—</strong>
+        </div>
+        <div>
+          <span>VOLATILITY (ATR)</span>
+          <strong id="atrValue">—</strong>
+        </div>
+      </div>
+    </article>
+
+    <!-- Signal Decision Card -->
+    <article class="panel signal-card">
+      <div class="card-label">COMPOSITE AI SIGNAL (สัญญาณสังเคราะห์)</div>
+      <div class="signal-heading">
+        <div>
+          <h2 id="signalText">ANALYZING</h2>
+          <span class="signal-sub" id="signalSub">กำลังประมวลผล 8 อินดิเคเตอร์...</span>
+        </div>
+        <div class="signal-badge-icon" id="signalBadgeIcon">📊</div>
+      </div>
+      <p id="signalDescription" class="signal-desc">คำนวณจากน้ำหนักความสอดคล้องของ Trend, Momentum และ Volume</p>
+      <div class="consensus-counter-box">
+        <div class="counter-item bullish">
+          <span class="counter-num" id="bullishCount">0</span>
+          <span class="counter-lbl">กระทิง (Bull)</span>
+        </div>
+        <div class="counter-item neutral">
+          <span class="counter-num" id="neutralCount">0</span>
+          <span class="counter-lbl">กลาง (Wait)</span>
+        </div>
+        <div class="counter-item bearish">
+          <span class="counter-num" id="bearishCount">0</span>
+          <span class="counter-lbl">หมี (Bear)</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- Model Confidence Card (ระดับความแน่นอน %) -->
+    <article class="panel confidence-card">
+      <div class="card-label">
+        <span>CONFIDENCE SCORE (ระดับความแน่นอน)</span>
+        <span class="tooltip-trigger" title="คำนวณจากเปอร์เซ็นต์ความสอดคล้องของอินดิเคเตอร์ ความแรงของเทรนด์ (ADX) และ Volume">ⓘ</span>
+      </div>
+      <div class="gauge-wrap">
+        <svg class="gauge" viewBox="0 0 220 125">
+          <path class="gauge-track" d="M 25 105 A 85 85 0 0 1 195 105" pathLength="100"></path>
+          <path class="gauge-value" id="gaugeValue" d="M 25 105 A 85 85 0 0 1 195 105" pathLength="100"></path>
+        </svg>
+        <div class="gauge-number">
+          <strong id="confidenceValue">0</strong>
+          <span>%</span>
+        </div>
+      </div>
+      <div class="confidence-footer">
+        <span class="confidence-dot" id="confidenceDot"></span>
+        <span id="confidenceLabel">รอการประมวลผล</span>
+        <span class="confidence-eval" id="confidenceEval">0 - 100%</span>
+      </div>
+      <div class="confidence-thresholds">
+        <span class="th-item low">&lt;50% ระวัง</span>
+        <span class="th-item med">50-69% ปานกลาง</span>
+        <span class="th-item high">70-84% ชัดเจน</span>
+        <span class="th-item ultra">85%+ เข้าทันที</span>
+      </div>
+    </article>
+  </section>
+
+  <!-- Chart Section & Indicators Row -->
+  <section class="content-grid">
+    <!-- Chart Panel with TradingView & Custom Mode Switch -->
+    <article class="panel chart-panel">
+      <div class="section-heading">
+        <div class="chart-title-area">
+          <span class="eyebrow">CANDLESTICK & MARKET DYNAMICS</span>
+          <h2>กราฟแท่งเทียนเรียลไทม์</h2>
+        </div>
+        
+        <div class="chart-controls">
+          <div class="chart-view-toggle">
+            <button class="toggle-btn active" id="btnViewTV">TradingView</button>
+            <button class="toggle-btn" id="btnViewCustom">Signal Overlay</button>
+          </div>
+          
+          <div class="timeframes" id="timeframeButtons">
+            <button data-tf="15m">15m</button>
+            <button data-tf="1h" class="active">1H</button>
+            <button data-tf="4h">4H</button>
+            <button data-tf="1d">1D</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TradingView Widget Container -->
+      <div class="tradingview-container" id="tvContainer">
+        <div id="tradingview_widget"></div>
+      </div>
+
+      <!-- Custom Signal Candlestick Chart (Overlay Mode) -->
+      <div class="custom-chart-container" id="customChartContainer" style="display:none;">
+        <div class="chart-legend">
+          <span><i class="legend-candle bullish"></i> แท่งเทียน</span>
+          <span><i class="legend-line ema9"></i> EMA 9</span>
+          <span><i class="legend-line ema21"></i> EMA 21</span>
+          <span><i class="legend-line ema50"></i> EMA 50</span>
+          <span><i class="legend-line-dashed entry-line"></i> Entry</span>
+          <span><i class="legend-line-dashed sl-line"></i> Stop Loss</span>
+          <span><i class="legend-line-dashed tp-line"></i> TP Targets</span>
+          <span><i class="legend-bar volume"></i> Volume</span>
+        </div>
+        <div class="chart-area">
+          <div class="y-axis" id="yAxis"></div>
+          <svg class="price-chart" id="priceChart" viewBox="0 0 800 290" preserveAspectRatio="none">
+            <g class="grid-lines" id="gridLines"></g>
+            <g id="volumeLayer"></g>
+            <g id="levelsLayer"></g>
+            <g id="candleLayer"></g>
+            <path class="ema-line ema9" id="ema9Line"></path>
+            <path class="ema-line ema21" id="ema21Line"></path>
+            <path class="ema-line ema50" id="ema50Line"></path>
+          </svg>
+        </div>
+        <div class="x-axis" id="xAxis"></div>
+      </div>
+    </article>
+
+    <!-- Multi-Indicator Consensus Engine -->
+    <article class="panel consensus-panel">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">8-CORE ANALYSIS ENGINE</span>
+          <h2>Indicator Consensus</h2>
+        </div>
+        <span class="consensus-score" id="consensusScore">0/100</span>
+      </div>
+      <p class="muted">คำนวณจากสูตรคณิตศาสตร์แท้ตามข้อมูลแท่งเทียนจริง</p>
+      
+      <div class="consensus-bar">
+        <span id="consensusBar" style="width:0%"></span>
+      </div>
+
+      <!-- Multi-Timeframe Summary Cards -->
+      <div class="multi-tf-grid" id="multiTFSummary" style="display:none;">
+        <!-- Rendered dynamically via script.js -->
+      </div>
+
+      <!-- Indicator Breakdown List -->
+      <div class="indicator-list" id="indicatorList">
+        <!-- Rendered dynamically via script.js -->
+      </div>
+
+      <div class="performance-metrics" id="performanceMetrics">
+        <!-- Rendered dynamically via script.js -->
+      </div>
+    </article>
+  </section>
+
+  <!-- Risk Management & Strategy Execution -->
+  <section class="analysis-grid">
+    <!-- Trade Execution & Risk Management Plan -->
+    <article class="panel risk-panel">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">RISK & CAPITAL MANAGEMENT</span>
+          <h2>แผนการเข้าเทรดและบริหารความเสี่ยง</h2>
+        </div>
+        <span class="risk-badge" id="riskBadge">CALCULATING</span>
+      </div>
+
+      <div class="risk-form">
+        <label>
+          พอร์ตเงินทุน ($ USD)
+          <input id="capitalInput" type="number" value="1000" min="10" step="50">
+        </label>
+        <label>
+          ความเสี่ยงต่อไม้ (%)
+          <input id="riskInput" type="number" value="1.5" min="0.1" max="10" step="0.1">
+        </label>
+      </div>
+
+      <div class="risk-grid">
+        <div class="risk-box entry-box">
+          <small>RECOMMENDED ENTRY</small>
+          <strong id="entryLevel">—</strong>
+          <span class="risk-subtext" id="entrySub">ราคาเข้าตลาดปัจจุบัน</span>
+        </div>
+        <div class="risk-box stop-box">
+          <small>STOP LOSS (SL)</small>
+          <strong class="red-text" id="stopLevel">—</strong>
+          <span class="risk-subtext" id="stopDiff">—</span>
+        </div>
+        <div class="risk-box tp-box">
+          <small>TARGET 1 (TP1 - 1.5R)</small>
+          <strong class="green-text" id="tp1Level">—</strong>
+          <span class="risk-subtext" id="tp1Diff">—</span>
+        </div>
+        <div class="risk-box tp-box">
+          <small>TARGET 2 (TP2 - 2.8R)</small>
+          <strong class="green-text" id="tp2Level">—</strong>
+          <span class="risk-subtext" id="tp2Diff">—</span>
+        </div>
+        <div class="risk-box tp-box tp3-box">
+          <small>TARGET 3 (TP3 - 4.5R RUNNER)</small>
+          <strong class="green-text" id="tp3Level">—</strong>
+          <span class="risk-subtext" id="tp3Diff">—</span>
+        </div>
+        <div class="risk-box ev-box">
+          <small>MATHEMATICAL EDGE ($EV)</small>
+          <strong class="blue-text" id="evLevel">—</strong>
+          <span class="risk-subtext" id="evDiff">ความคุ้มค่าเชิงสถิติ</span>
+        </div>
+      </div>
+
+      <!-- Execution Playbook & Trailing Stop Guidance -->
+      <div class="playbook-box" id="playbookBox">
+        <div class="playbook-header">
+          <span class="playbook-tag" id="setupTypeTag">⚡ SETUP TYPE: ANALYZING</span>
+          <span class="trailing-badge" id="trailingBadge">🎯 SL MANAGEMENT</span>
+        </div>
+        <p class="playbook-text" id="playbookText">
+          คำแนะนำแผนการรันเทรนด์และจุดเลื่อน Stop Loss เมื่อราคาเข้าเป้าหมาย
+        </p>
+      </div>
+
+      <div class="position-sizing-bar">
+        <div class="pos-item">
+          <span>ขนาด Position แนะนำ</span>
+          <strong id="positionBtc">— BTC</strong>
+        </div>
+        <div class="pos-item">
+          <span>มูลค่า Position</span>
+          <strong id="positionUsd">— USD</strong>
+        </div>
+        <div class="pos-item">
+          <span>ความเสี่ยงเงินสูงสุด (Max Loss)</span>
+          <strong class="red-text" id="maxLossUsd">— USD</strong>
+        </div>
+        <div class="pos-item">
+          <span>Risk / Reward Ratio</span>
+          <strong class="green-text" id="rrValue">1 : 2.0</strong>
+        </div>
+      </div>
+    </article>
+
+    <!-- Strategy Intelligence & Rule Explanation -->
+    <article class="panel insight-panel">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">INTELLIGENCE LOGIC</span>
+          <h2>เหตุผลประกอบสัญญาณ & กฎความแม่นยำ</h2>
+        </div>
+        <span class="badge-tag">AI RATIONALE</span>
+      </div>
+
+      <div class="insight-list" id="insightList">
+        <!-- Rendered dynamically via script.js -->
+      </div>
+
+      <div class="confidence-rule-guide">
+        <h4>📖 กฎการพิจารณาความแน่นอน (%):</h4>
+        <ul>
+          <li><strong>&lt; 50% (เช่น 40%):</strong> สัญญาณขัดแย้งกันอย่างมีนัยสำคัญ (เช่น Trend ขึ้นแต่ RSI Overbought และ MACD ตัดลง) <em>ห้ามรีบเข้า ให้ถือเงินสดรอยืนยัน</em></li>
+          <li><strong>50% - 69%:</strong> สัญญาณเริ่มมีน้ำหนักปานกลาง สามารถแบ่งไม้หรือรอการ Breakout คอนเฟิร์ม</li>
+          <li><strong>70% - 84%:</strong> สัญญาณแข็งแกร่ง อินดิเคเตอร์ส่วนใหญ่ไปในทิศทางเดียวกัน เข้าเทรดได้ตามจุด Entry</li>
+          <li><strong>85% - 100%:</strong> ระดับความแม่นยำสูงสุด สัญญาณคอนเฟิร์มทั้ง Trend, Momentum, Volume และ ADX สามารถเข้าได้ทันที</li>
+        </ul>
+      </div>
+    </article>
+  </section>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-left">
+      <span>⚡ ข้อมูลราคาและการคำนวณดึงจาก Binance Public API แบบเรียลไทม์</span>
+      <span>• พัฒนาเพื่อการวิเคราะห์ทางเทคนิคและการบริหารความเสี่ยงอย่างเป็นระบบ</span>
+    </div>
+    <div class="footer-right">
+      <span>ไม่ใช่คำแนะนำการลงทุนโดยตรง (Financial Advice) โปรดบริหารความเสี่ยงอย่างเคร่งครัด</span>
+    </div>
+  </footer>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

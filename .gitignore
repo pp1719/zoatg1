@@ -1,0 +1,9 @@
+# Temporary / backup archives (not part of the source)
+*.zip
+*.tar.gz
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json

@@ -20,7 +20,7 @@
       <div>
         <div class="brand-title">
           <h1>BTC/USD <span>AI INTELLIGENCE</span></h1>
-          <span class="version-tag">PRO v3.0</span>
+          <span class="version-tag">PRO v3.3</span>
         </div>
         <p>Multi-Timeframe AI Engine • 10 Indicators • Real-Time Divergence Detection • Kelly Position Sizing</p>
       </div>
@@ -32,14 +32,14 @@
         <span class="feed-text" id="feedText">BINANCE LIVE FEED</span>
         <small id="lastUpdated">กำลังเชื่อมต่อ...</small>
       </div>
-      <button class="btn-action" id="refreshButton" title="รีเฟรชข้อมูลล่าสุด">
-        <span class="refresh-icon">↻</span> อัปเดตสด
+      <button class="btn-action" id="refreshButton" title="รีเฟรชข้อมูลล่าสุด" aria-label="รีเฟรชข้อมูลล่าสุด">
+        <span class="refresh-icon" aria-hidden="true">↻</span> อัปเดตสด
       </button>
     </div>
   </header>
 
   <!-- Data Integrity / Fallback Warning Banner (ซ่อนเมื่อข้อมูลสดปกติ) -->
-  <div class="data-banner" id="dataBanner" role="alert" hidden>
+  <div class="data-banner" id="dataBanner" role="alert" aria-live="assertive" hidden>
     <span class="data-banner-icon">⚠️</span>
     <div class="data-banner-text">
       <strong id="dataBannerTitle">Data Source Warning</strong>

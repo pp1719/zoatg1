@@ -1,6 +1,6 @@
 /**
  * ═══════════════════════════════════════════════════════════════
- * BTC/USD PRO v3.2 — Multi-Indicator AI Intelligence & Profit Engine
+ * BTC/USD PRO v3.3 — Multi-Indicator AI Intelligence & Profit Engine
  * Real-Time Binance WebSocket + Multi-Timeframe Analysis + Kelly Edge
  * ═══════════════════════════════════════════════════════════════
  *
@@ -828,8 +828,25 @@ function calcProfitOpportunity(analysis, capital = 1000, riskPct = 1.5) {
   const cappedRiskUsd = rawRiskUsd * confModifier;
 
   // Kelly Criterion fraction calculation
-  const winProb = clamp(confidence / 100, 0.35, 0.85);
-  const avgRR = 2.4; // composite weighted R (1.5R * 0.4 + 2.8R * 0.4 + 4.5R * 0.2 = 2.62)
+  // Use real tracked win-rate if we have enough signal outcomes, otherwise
+  // fall back to confidence-derived estimate (backward compatible).
+  const perf = state.performance || {};
+  const hasRealStats = perf.totalSignals >= 10 && perf.wins + perf.losses > 0;
+  const realWinRate = hasRealStats ? (perf.wins / (perf.wins + perf.losses)) * 100 : null;
+  // Blend: if real stats exist, 70% weight on reality, 30% on confidence signal.
+  const effectiveWinRate = realWinRate !== null ? (realWinRate * 0.7 + confidence * 0.3) : confidence;
+  const winProb = clamp(effectiveWinRate / 100, 0.35, 0.85);
+
+  // avg RR — prefer empirically measured average R from closed trades, else 2.4R.
+  let avgRR = 2.4; // composite weighted R (1.5R * 0.4 + 2.8R * 0.4 + 4.5R * 0.2 = 2.62)
+  if (hasRealStats && perf.history && perf.history.length > 0) {
+    const rs = perf.history.map(h => Number(h.rMultiple) || 0).filter(v => v !== 0);
+    if (rs.length >= 10) {
+      const realizedAvgR = rs.reduce((sum, v) => sum + v, 0) / rs.length;
+      if (Number.isFinite(realizedAvgR) && realizedAvgR > 0) avgRR = clamp(realizedAvgR, 1.0, 3.5);
+    }
+  }
+
   const kellyFraction = Math.max(0.05, (winProb * avgRR - (1 - winProb)) / avgRR);
   const conservativeKellyPct = clamp(kellyFraction * 0.3, 0.05, 0.25) * safeRiskPct;
   const kellyRiskUsd = (safeCapital * conservativeKellyPct) / 100;
@@ -851,7 +868,8 @@ function calcProfitOpportunity(analysis, capital = 1000, riskPct = 1.5) {
   const avgWinUsd = usedLossUsd * avgRR;
   const grossExpectedValueUsd = (winProb * avgWinUsd) - ((1 - winProb) * usedLossUsd);
   const expectedValueUsd = grossExpectedValueUsd - roundTripFeeUsd;
-  const expectedValueR = (winProb * avgRR) - (1 - winProb);
+  // NET EV in R units (gross R expectancy minus fee drag in R terms).
+  const expectedValueR = ((winProb * avgRR) - (1 - winProb)) - feeBreakEvenR;
 
   // Break-even win rate AFTER fees: f*/(f + (R multiply - f)) style.
   // At each realized target the fee drags R down, so compute net RR used for EV.
@@ -1537,6 +1555,11 @@ function stopFallbackPolling() {
 // ══════════════════════════════════════════════════════
 
 async function fetchBinanceRest(interval = '1h', limit = 120) {
+  // Global concurrency gate: never fire more than MAX_INFLIGHT_FETCHES REST
+  // calls at once (avoids Binance 429 on multi-timeframe refreshes / fallback
+  // polling racing each other).
+  await fetchGate.acquire();
+
   const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timeout = controller ? setTimeout(() => controller.abort(), CONFIG.API_TIMEOUT) : null;
 
@@ -1583,8 +1606,38 @@ async function fetchBinanceRest(interval = '1h', limit = 120) {
   } catch (err) {
     if (timeout) clearTimeout(timeout);
     return generateFallbackData(interval, limit);
+  } finally {
+    fetchGate.release();
   }
 }
+
+// ── Simple async semaphore used to cap concurrent REST fetches. ──
+class PromiseGate {
+  constructor(maxConcurrent = 2) {
+    this.maxConcurrent = maxConcurrent;
+    this.active = 0;
+    this.queue = [];
+  }
+  acquire() {
+    return new Promise(resolve => {
+      if (this.active < this.maxConcurrent) {
+        this.active += 1;
+        resolve();
+      } else {
+        this.queue.push(resolve);
+      }
+    });
+  }
+  release() {
+    this.active -= 1;
+    const next = this.queue.shift();
+    if (next) {
+      this.active += 1;
+      next();
+    }
+  }
+}
+const fetchGate = new PromiseGate(2);
 
 function generateFallbackData(interval = '1h', count = 120) {
   let close = 82500;
@@ -1668,6 +1721,7 @@ async function refreshData() {
       if (!state.dataHealth.valid) {
         state.analysis = null;
         if (btn) btn.classList.add('data-warning');
+        renderDataBanner(); // Surface the warning even when no analysis is rendered
         return;
       }
 
@@ -2452,7 +2506,14 @@ function recordSignalOutcome({ direction, entry, stop, takeProfit, confidence, r
   const grossLoss = Math.abs(state.performance.history.filter(item => (item.outcome || 0) < 0).reduce((sum, item) => sum + (item.outcome || 0), 0));
   state.performance.profitFactor = grossLoss > 0 ? grossWin / grossLoss : (grossWin > 0 ? Number.POSITIVE_INFINITY : 1);
 
-  const runningDrawdown = state.performance.history.reduce((max, item) => Math.max(max, Math.abs(item.outcome || 0)), 0);
+  // Equity-curve max drawdown from signal history (peak-to-trough of P&L).
+  let cur = 0, peak = 0, runningDrawdown = 0;
+  for (const item of state.performance.history) {
+    cur += (item.outcome || 0);
+    if (cur > peak) peak = cur;
+    const dd = peak - cur;
+    if (dd > runningDrawdown) runningDrawdown = dd;
+  }
   state.performance.maxDrawdown = runningDrawdown;
   state.performance.lastRun = Date.now();
 
@@ -2553,7 +2614,16 @@ function generateBacktestSummary(results = []) {
   const grossLoss = Math.abs(results.filter(item => (item.outcome || 0) < 0).reduce((sum, item) => sum + (item.outcome || 0), 0));
   const profitFactor = grossLoss > 0 ? grossWin / grossLoss : (grossWin > 0 ? Number.POSITIVE_INFINITY : 1);
   const avgR = total ? netProfit / total : 0;
-  const maxDrawdown = results.reduce((max, item) => Math.max(max, Math.abs(item.outcome || 0)), 0);
+
+  // Equity-curve max drawdown: peak-to-trough of cumulative P&L (more honest
+  // than taking the single worst loss — reflects capital erosion path).
+  let cur = 0, peak = 0, maxDrawdown = 0;
+  for (const item of results) {
+    cur += (item.outcome || 0);
+    if (cur > peak) peak = cur;
+    const dd = peak - cur;
+    if (dd > maxDrawdown) maxDrawdown = dd;
+  }
 
   return {
     total,
@@ -2654,7 +2724,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
     }
 
     startWebSocket();
-    console.log('🚀 BTC/USD PRO v3.2 AI Intelligence & Profit Engine Initialized');
+    console.log('🚀 BTC/USD PRO v3.3 AI Intelligence & Profit Engine Initialized');
   });
 }
 
@@ -2688,5 +2758,10 @@ if (typeof module !== 'undefined' && module.exports) {
     recordSignalOutcome,
     simulateBacktestFromCandles,
     generateBacktestSummary,
+    getWebSocketUrl,
+    scheduleReconnect,
+    updateConnectionStatus,
+    startFallbackPolling,
+    stopFallbackPolling,
   };
 }

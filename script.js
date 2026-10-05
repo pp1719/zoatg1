@@ -738,10 +738,27 @@ function getSignalConfirmation(primaryResult) {
 
   const checks = [];
   if (primaryResult.isTrending) checks.push('trend');
-  if (primaryResult.macd.line > primaryResult.macd.signal && primaryResult.stoch.k > primaryResult.stoch.d) {
+  // Field-safe momentum check: handle partial/fake-data objects where macd/stoch
+  // may be missing (e.g. generateFallbackData or hand-built test fixtures).
+  if (
+    primaryResult.macd &&
+    primaryResult.stoch &&
+    Number.isFinite(primaryResult.macd.line) &&
+    Number.isFinite(primaryResult.macd.signal) &&
+    Number.isFinite(primaryResult.stoch.k) &&
+    Number.isFinite(primaryResult.stoch.d) &&
+    primaryResult.macd.line > primaryResult.macd.signal &&
+    primaryResult.stoch.k > primaryResult.stoch.d
+  ) {
     checks.push('momentum');
   }
-  if (primaryResult.price > primaryResult.ema21 && primaryResult.ema9 > primaryResult.ema21) {
+  if (
+    primaryResult.price &&
+    Number.isFinite(primaryResult.ema21) &&
+    Number.isFinite(primaryResult.ema9) &&
+    primaryResult.price > primaryResult.ema21 &&
+    primaryResult.ema9 > primaryResult.ema21
+  ) {
     checks.push('structure');
   }
   if (primaryResult.volProfile && primaryResult.volProfile.bins && primaryResult.volProfile.bins.length > 0) {
@@ -782,7 +799,7 @@ function evaluateSignalThresholds(performanceSummary) {
  * - Mathematical Expectancy ($EV) per trade
  * - Trailing Stop Rule for locking in profit
  */
-function calcProfitOpportunity(analysis, capital = 1000, riskPct = 1.5) {
+function calcProfitOpportunity(analysis, capital = 1000, riskPct = 1.5, performance) {
   if (!analysis) return null;
 
   const price = analysis.price;
@@ -829,8 +846,10 @@ function calcProfitOpportunity(analysis, capital = 1000, riskPct = 1.5) {
 
   // Kelly Criterion fraction calculation
   // Use real tracked win-rate if we have enough signal outcomes, otherwise
-  // fall back to confidence-derived estimate (backward compatible).
-  const perf = state.performance || {};
+  // fall back to confidence-derived estimate (backward compatible). The caller
+  // may pass an explicit `performance` snapshot (e.g. for pure unit tests) —
+  // otherwise we read the shared global state.
+  const perf = performance || state.performance || {};
   const hasRealStats = perf.totalSignals >= 10 && perf.wins + perf.losses > 0;
   const realWinRate = hasRealStats ? (perf.wins / (perf.wins + perf.losses)) * 100 : null;
   // Blend: if real stats exist, 70% weight on reality, 30% on confidence signal.
@@ -913,6 +932,7 @@ function calcProfitOpportunity(analysis, capital = 1000, riskPct = 1.5) {
     feeBreakEvenR,
     breakEvenWinRate,
     netRr,
+    avgRR,
     winProb,
     setupType,
     trailingRule,
@@ -939,7 +959,10 @@ function analyzeTimeframe(candles, interval) {
   const ema9 = getLastValid(ema9Series, price);
   const ema21 = getLastValid(ema21Series, price);
   const ema50 = getLastValid(ema50Series, price);
-  const ema200 = getLastValid(ema200Series, price * 0.95);
+  // EMA200 may not have enough history (e.g. 80-candle REST fetch). Fall back
+  // to the longest EMA we *do* have so the macro bias is still data-driven
+  // instead of hard-coded 0.95x price.
+  const ema200 = getLastValid(ema200Series, getLastValid(ema50Series, price));
 
   const rsiSeries = calcRSI(closes, 14);
   const rsiV = getLastValid(rsiSeries, 50);
@@ -1224,6 +1247,7 @@ async function getOrFetchTfCandles(tf) {
       state.tfCache[tf] = {
         candles: data.candles,
         ticker: data.ticker,
+        source: data.source,
         timestamp: now,
       };
       return state.tfCache[tf];
@@ -1235,7 +1259,7 @@ async function getOrFetchTfCandles(tf) {
   return null;
 }
 
-async function generateMasterSignal() {
+async function generateMasterSignal(opts = {}) {
   const tfResults = {};
   let masterNorm = 0;
   let masterConf = 0;
@@ -1355,6 +1379,7 @@ async function generateMasterSignal() {
 
   const compositeAnalysis = {
     ...primaryResult,
+    dataSource: state.dataHealth?.source || 'unknown',
     signalType,
     signalClass,
     badgeIcon,
@@ -1371,10 +1396,11 @@ async function generateMasterSignal() {
     timestamp: Date.now(),
   };
 
-  // Compute profit setup
-  const capital = Number($('capitalInput')?.value) || 1000;
-  const riskPct = Number($('riskInput')?.value) || 1.5;
-  state.profitSetup = calcProfitOpportunity(compositeAnalysis, capital, riskPct);
+  // Compute profit setup — DOM values only when no explicit opts are given
+  // (keeps the function unit-testable without a browser document).
+  const capital = Number(opts.capital) || Number($('capitalInput')?.value) || 1000;
+  const riskPct = Number(opts.riskPct) || Number($('riskInput')?.value) || 1.5;
+  state.profitSetup = calcProfitOpportunity(compositeAnalysis, capital, riskPct, opts.performance);
 
   return compositeAnalysis;
 }
@@ -2494,6 +2520,11 @@ function recordSignalOutcome({ direction, entry, stop, takeProfit, confidence, r
     rMultiple,
     at: Date.now(),
   });
+  // Cap runtime history so the in-memory array cannot grow unbounded
+  // (localStorage persistence caps at the same limit on reload).
+  if (state.performance.history.length > 2000) {
+    state.performance.history = state.performance.history.slice(-2000);
+  }
 
   state.performance.totalSignals += 1;
   if (pnl > 0) state.performance.wins += 1;

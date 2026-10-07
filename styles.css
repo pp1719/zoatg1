@@ -5,32 +5,39 @@
 :root {
   --bg-main: #0a1110;
   --bg-card: rgba(17, 28, 26, 0.92);
-  --bg-card-hover: rgba(22, 37, 34, 0.96);
   --bg-subtle: #0e1a18;
   --border: rgba(140, 205, 185, 0.12);
-  --border-bright: rgba(0, 242, 173, 0.35);
   
   --text-main: #f2f8f5;
   --text-muted: #93aca4;
   --text-dim: #607a72;
 
-  --ok: #34e5a8;          /* positive / buy */
-  --ok-dim: rgba(52, 229, 168, 0.12);
-  --warn: #ffbe4d;        /* caution   */
-  --warn-dim: rgba(255, 190, 77, 0.12);
-  --danger: #ff5c7a;      /* negative / sell */
-  --danger-dim: rgba(255, 92, 122, 0.12);
-  --info: #4cc2ff;        /* neutral / info */
-  --info-dim: rgba(76, 194, 255, 0.12);
-
-  --accent: #00f2ad;      /* legacy green alias */
+  /* Signal palette (single source of truth) */
   --neon-green: #00f2ad;
+  --neon-green-glow: 0 0 18px rgba(0, 242, 173, 0.45), 0 0 6px rgba(0, 242, 173, 0.3);
   --neon-green-dim: rgba(0, 242, 173, 0.12);
-  --neon-red: #ff5c7a;
-  --neon-red-dim: rgba(255, 92, 122, 0.12);
+  --neon-red: #ff4d6d;
+  --neon-red-dim: rgba(255, 77, 109, 0.12);
   --amber: #ffbe4d;
   --amber-dim: rgba(255, 190, 77, 0.12);
   --blue: #4cc2ff;
+
+  /* Semantic aliases (derived from the palette above) */
+  --ok: var(--neon-green);
+  --ok-dim: rgba(0, 242, 173, 0.12);
+  --warn: var(--amber);
+  --warn-dim: rgba(255, 190, 77, 0.12);
+  --danger: var(--neon-red);
+  --danger-dim: rgba(255, 77, 109, 0.12);
+  --info: var(--blue);
+  --info-dim: rgba(76, 194, 255, 0.12);
+
+  /* Chart series palette */
+  --candle-up: var(--neon-green);
+  --ema9: #38bdf8;
+  --ema21: #eab308;
+  --ema50: #a855f7;
+  --entry: #eaf5f1;
 
   --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.25);
   --shadow-soft: 0 4px 14px rgba(0, 0, 0, 0.18);
@@ -906,9 +913,9 @@ body {
   margin-right: 4px;
 }
 
-.legend-line.ema9 { background: #38bdf8; }
-.legend-line.ema21 { background: #eab308; }
-.legend-line.ema50 { background: #a855f7; }
+.legend-line.ema9 { background: var(--ema9); }
+.legend-line.ema21 { background: var(--ema21); }
+.legend-line.ema50 { background: var(--ema50); }
 
 .legend-line-dashed {
   display: inline-block;
@@ -919,9 +926,10 @@ body {
   margin-right: 4px;
 }
 
-.entry-line { border-color: #eaf5f1; }
-.sl-line { border-color: #ff4d6d; }
-.tp-line { border-color: #00f2ad; }
+.entry-line { border-color: var(--entry); }
+.sl-line { border-color: var(--neon-red); }
+.tp-line { border-color: var(--candle-up); }
+
 
 .legend-bar {
   display: inline-block;
@@ -971,9 +979,9 @@ body {
   fill: none;
   stroke-width: 1.6;
 }
-.ema-line.ema9 { stroke: #38bdf8; }
-.ema-line.ema21 { stroke: #eab308; }
-.ema-line.ema50 { stroke: #a855f7; }
+.ema-line.ema9 { stroke: var(--ema9); }
+.ema-line.ema21 { stroke: var(--ema21); }
+.ema-line.ema50 { stroke: var(--ema50); }
 
 /* Consensus Panel & Indicator List */
 .consensus-score {
@@ -1581,8 +1589,8 @@ body {
   margin: 0 24px 8px;
   border-radius: 10px;
   background: linear-gradient(135deg, #3a2a00, #2b1f00);
-  border: 1px solid #ffb020;
-  color: #ffe0a0;
+  border: 1px solid var(--amber);
+  color: rgba(255, 190, 77, 0.85);
   font-size: 13px;
   line-height: 1.4;
   box-shadow: 0 2px 10px rgba(255, 176, 32, 0.15);
@@ -1601,19 +1609,19 @@ body {
   flex: 1;
 }
 .data-banner-text strong {
-  color: #ffd16b;
+  color: rgba(255, 190, 77, 0.70);
   letter-spacing: 0.4px;
 }
 .data-banner.warning {
   background: linear-gradient(135deg, #3a2a00, #2b1f00);
-  border-color: #ffb020;
-  color: #ffe0a0;
+  border-color: var(--amber);
+  color: rgba(255, 190, 77, 0.85);
 }
 .data-banner.error {
   background: linear-gradient(135deg, #3a0f0f, #2a0c0c);
-  border-color: #ff6b6b;
-  color: #ffc9c9;
+  border-color: var(--neon-red);
+  color: rgba(255, 77, 109, 0.75);
 }
 .data-banner.error strong {
-  color: #ff8f8f;
+  color: rgba(255, 77, 109, 0.60);
 }

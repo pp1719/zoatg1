@@ -1851,7 +1851,7 @@ function renderFullDashboard() {
   if ($('actionIcon')) $('actionIcon').textContent = a.badgeIcon;
 
   const readinessText = a.tradeReady ? 'READY • ENTRY ALLOWED' : 'WAIT • NO ENTRY YET';
-  const readinessColor = a.tradeReady ? 'var(--neon-green)' : '#ffb020';
+  const readinessColor = a.tradeReady ? 'var(--neon-green)' : 'var(--amber)';
   const reasonText = a.validationReasons && a.validationReasons.length
     ? `Reason: ${a.validationReasons.map(getValidationReasonText).join(' • ')}`
     : 'Reason: baseline checks passed';
@@ -1884,13 +1884,13 @@ function renderFullDashboard() {
 
   let gaugeColor, confLabel, confColor;
   if (a.confidence >= 80) {
-    gaugeColor = '#00f2ad'; confLabel = 'High Conviction (เชื่อถือได้สูง)'; confColor = '#00f2ad';
+    gaugeColor = 'var(--neon-green)'; confLabel = 'High Conviction (เชื่อถือได้สูง)'; confColor = 'var(--neon-green)';
   } else if (a.confidence >= 65) {
-    gaugeColor = '#22d3a5'; confLabel = 'Reliable Signal (น่าเชื่อถือ)'; confColor = '#22d3a5';
+    gaugeColor = 'var(--neon-green)'; confLabel = 'Reliable Signal (น่าเชื่อถือ)'; confColor = 'var(--neon-green)';
   } else if (a.confidence >= 48) {
-    gaugeColor = '#e9bc67'; confLabel = 'Moderate Signal (ปานกลาง)'; confColor = '#e9bc67';
+    gaugeColor = 'var(--amber)'; confLabel = 'Moderate Signal (ปานกลาง)'; confColor = 'var(--amber)';
   } else {
-    gaugeColor = '#ff4d6d'; confLabel = 'Low Conviction (อ่อนแอ/ขัดแย้ง)'; confColor = '#ff4d6d';
+    gaugeColor = 'var(--neon-red)'; confLabel = 'Low Conviction (อ่อนแอ/ขัดแย้ง)'; confColor = 'var(--neon-red)';
   }
 
   if (gauge) gauge.style.stroke = gaugeColor;
@@ -2275,7 +2275,7 @@ function renderCustomChart(candles, analysis) {
     const hy = getY(c.high);
     const ly = getY(c.low);
     const bull = c.close >= c.open;
-    const color = bull ? '#00f2ad' : '#ff4d6d';
+    const color = bull ? 'var(--neon-green)' : 'var(--neon-red)';
     const top = Math.min(oy, cy);
     const bh = Math.max(2, Math.abs(cy - oy));
     return `
@@ -2326,24 +2326,24 @@ function renderCustomChart(candles, analysis) {
 
     levelsLayer.innerHTML = `
       <!-- Entry Level -->
-      <line x1="0" y1="${entryY}" x2="${W}" y2="${entryY}" stroke="#eaf5f1" stroke-dasharray="4,4" stroke-width="1.2" opacity="0.75"/>
-      <rect x="8" y="${entryY - 14}" width="85" height="13" fill="#132420" rx="3" stroke="#eaf5f1" stroke-width="0.8"/>
-      <text x="12" y="${entryY - 4}" fill="#eaf5f1" font-size="9" font-family="Space Grotesk">Entry: $${entryP.toFixed(0)}</text>
+      <line x1="0" y1="${entryY}" x2="${W}" y2="${entryY}" stroke="var(--entry)" stroke-dasharray="4,4" stroke-width="1.2" opacity="0.75"/>
+      <rect x="8" y="${entryY - 14}" width="85" height="13" fill="#132420" rx="3" stroke="var(--entry)" stroke-width="0.8"/>
+      <text x="12" y="${entryY - 4}" fill="var(--entry)" font-size="9" font-family="Space Grotesk">Entry: $${entryP.toFixed(0)}</text>
 
       <!-- Stop Loss Level -->
-      <line x1="0" y1="${slY}" x2="${W}" y2="${slY}" stroke="#ff4d6d" stroke-dasharray="4,4" stroke-width="1.4"/>
-      <rect x="8" y="${slY - 14}" width="78" height="13" fill="#2d1318" rx="3" stroke="#ff4d6d" stroke-width="0.8"/>
-      <text x="12" y="${slY - 4}" fill="#ff4d6d" font-size="9" font-family="Space Grotesk">SL: $${slP.toFixed(0)}</text>
+      <line x1="0" y1="${slY}" x2="${W}" y2="${slY}" stroke="var(--neon-red)" stroke-dasharray="4,4" stroke-width="1.4"/>
+      <rect x="8" y="${slY - 14}" width="78" height="13" fill="#2d1318" rx="3" stroke="var(--neon-red)" stroke-width="0.8"/>
+      <text x="12" y="${slY - 4}" fill="var(--neon-red)" font-size="9" font-family="Space Grotesk">SL: $${slP.toFixed(0)}</text>
 
       <!-- TP1 Level -->
-      <line x1="0" y1="${tp1Y}" x2="${W}" y2="${tp1Y}" stroke="#00f2ad" stroke-dasharray="4,4" stroke-width="1.4"/>
-      <rect x="8" y="${tp1Y - 14}" width="85" height="13" fill="#0d2922" rx="3" stroke="#00f2ad" stroke-width="0.8"/>
-      <text x="12" y="${tp1Y - 4}" fill="#00f2ad" font-size="9" font-family="Space Grotesk">TP1: $${tp1P.toFixed(0)}</text>
+      <line x1="0" y1="${tp1Y}" x2="${W}" y2="${tp1Y}" stroke="var(--neon-green)" stroke-dasharray="4,4" stroke-width="1.4"/>
+      <rect x="8" y="${tp1Y - 14}" width="85" height="13" fill="#0d2922" rx="3" stroke="var(--neon-green)" stroke-width="0.8"/>
+      <text x="12" y="${tp1Y - 4}" fill="var(--neon-green)" font-size="9" font-family="Space Grotesk">TP1: $${tp1P.toFixed(0)}</text>
 
       <!-- TP2 Level -->
-      <line x1="0" y1="${tp2Y}" x2="${W}" y2="${tp2Y}" stroke="#38bdf8" stroke-dasharray="3,3" stroke-width="1.2"/>
-      <rect x="8" y="${tp2Y - 14}" width="85" height="13" fill="#0c202a" rx="3" stroke="#38bdf8" stroke-width="0.8"/>
-      <text x="12" y="${tp2Y - 4}" fill="#38bdf8" font-size="9" font-family="Space Grotesk">TP2: $${tp2P.toFixed(0)}</text>
+      <line x1="0" y1="${tp2Y}" x2="${W}" y2="${tp2Y}" stroke="var(--blue)" stroke-dasharray="3,3" stroke-width="1.2"/>
+      <rect x="8" y="${tp2Y - 14}" width="85" height="13" fill="#0c202a" rx="3" stroke="var(--blue)" stroke-width="0.8"/>
+      <text x="12" y="${tp2Y - 4}" fill="var(--blue)" font-size="9" font-family="Space Grotesk">TP2: $${tp2P.toFixed(0)}</text>
     `;
   }
 
